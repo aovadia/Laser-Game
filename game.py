@@ -23,8 +23,7 @@ class Game:
         self.welcome_screen = True
         self.difficulty = None
         self.player_lives = PLAYER_LIVES
-        self.last_hit_time = 0
-        self.invincibility_ms = 1000  # 1 second of invincibility
+
 
 
         # Set backgroud
@@ -39,7 +38,7 @@ class Game:
         self.high_score = 0
         
         # Set player and enemy
-        self.player = Player()
+        self.player = Player(PLAYER_LIVES)
         self.laser_easy = Laser()
         self.laser_medium = FastLaser()
         self.laser_hard = FastLaser()
@@ -47,13 +46,6 @@ class Game:
         # Track which music is currently playing: "game" or "over"
         self.music_state = None
 
-        # Set dict for key presses
-        self.moving = {
-            "up": False,
-            "down": False,
-            "left": False,
-            "right": False
-        }
 
     # Display background  
     def draw_background(self):
@@ -139,33 +131,12 @@ class Game:
                         self.start_time = pygame.time.get_ticks()
             
 
-
-            elif self.game_active:
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_w:
-                        self.moving["up"] = True
-                    if event.key == pygame.K_s:
-                        self.moving["down"] = True
-                    if event.key == pygame.K_a:
-                        self.moving["left"] = True
-                    if event.key == pygame.K_d:
-                        self.moving["right"] = True
-
-                if event.type == pygame.KEYUP:
-                    if event.key == pygame.K_w:
-                        self.moving["up"] = False
-                    if event.key == pygame.K_s:
-                        self.moving["down"] = False
-                    if event.key == pygame.K_a:
-                        self.moving["left"] = False
-                    if event.key == pygame.K_d:
-                        self.moving["right"] = False
-
-            else:
+            elif not self.game_active:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
                         self.reset_to_welcome()
 
+            else: pass
 
     def reset_to_welcome(self):
         self.game_active = False
@@ -177,14 +148,14 @@ class Game:
         self.last_hit_time = 0
 
         # reset entities
-        self.player = Player()
+        self.player = Player(PLAYER_LIVES)
         self.laser_easy = Laser()
         self.laser_medium = FastLaser()
         self.laser_hard = FastLaser()
 
-        # reset input
-        for k in self.moving:
-            self.moving[k] = False
+        # # reset input
+        # for k in self.moving:
+        #     self.moving[k] = False
 
         pygame.mixer.music.stop()
         self.music_state = None
@@ -201,20 +172,8 @@ class Game:
         level_choice_rect = level_choice_surface.get_rect(center = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2))
         self.screen.blit(level_choice_surface, level_choice_rect)
     
-    def draw_player_lives(self):
-        player_lives_font = pygame.font.Font(FONT, 40)
-        player_lives_surface = player_lives_font.render(f"Lives: {self.player_lives}", False, (168, 50, 145))
-        player_lives_rect = player_lives_surface.get_rect(topleft = (25, 35))
-        self.screen.blit(player_lives_surface, player_lives_rect)
 
-    def try_take_damage(self):
-        now = pygame.time.get_ticks()
-        if now - self.last_hit_time >= self.invincibility_ms:
-            self.player_lives -= 1
-            self.last_hit_time = now
 
-            if self.player_lives <= 0:
-                self.game_active = False
 
 
     #  Display changes based on events
@@ -228,18 +187,23 @@ class Game:
             
             self.calculate_score()
 
-     
+            # Add player to screen
+            self.player.update()
+
             # Move player
-            if self.moving["up"]:
-                self.player.move("up")
-            if self.moving["down"]:
-                self.player.move("down")
-            if self.moving["left"]:
-                self.player.move("left")
-            if self.moving["right"]:
-                self.player.move("right")
+            # if self.moving["up"]:
+            #     self.player.move("up")
+            # if self.moving["down"]:
+            #     self.player.move("down")
+            # if self.moving["left"]:
+            #     self.player.move("left")
+            # if self.moving["right"]:
+            #     self.player.move("right")
 
             self.laser_easy.move()
+            if self.player.player_lives <= 0:
+                self.game_active = False
+
 
             if self.difficulty == 1:
                 self.laser_medium.move()
@@ -252,15 +216,15 @@ class Game:
         
             # check if laser collides with player
             if self.laser_easy.rect.colliderect(self.player.rect):
-                self.try_take_damage()
+                self.player.try_take_damage()
 
                 
             if self.laser_medium.rect.colliderect(self.player.rect) and self.difficulty == 1:
-                    self.try_take_damage()
+                    self.player.try_take_damage()
 
 
             if self.laser_hard.rect.colliderect(self.player.rect) and self.difficulty == 2:
-                self.try_take_damage()
+                self.player.try_take_damage()
 
         else:
             pass
@@ -273,10 +237,10 @@ class Game:
         elif self.game_active:
             self.draw_background()
             
-            self.draw_player_lives()
-            # Add player to screen
-            self.player.draw(self.screen)
+            self.player.draw_player_lives(self.screen)
+       
 
+            self.player.draw(self.screen)
 
             self.laser_easy.draw(self.screen)
 

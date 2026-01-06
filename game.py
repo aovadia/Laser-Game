@@ -1,0 +1,308 @@
+import pygame
+from sys import exit
+from constants import *
+from random import randint
+from player import Player
+from laser import Laser, FastLaser
+
+
+class Game:
+    def __init__(self):
+        # Init game
+        pygame.init()
+        
+        # Set clock
+        self.clock = pygame.time.Clock()
+
+        # Display Screen
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        pygame.display.set_caption("Laser jumper")
+
+        # Vars
+        self.game_active = False
+        self.welcome_screen = True
+        self.difficulty = None
+        self.player_lives = PLAYER_LIVES
+        self.last_hit_time = 0
+        self.invincibility_ms = 1000  # 1 second of invincibility
+
+
+        # Set backgroud
+        self.ground_surface = pygame.image.load(BACKGROUND_IMG).convert()
+
+        # Set font
+        self.font = pygame.font.Font(FONT, 32)
+
+        # Set score
+        self.score = 0
+        self.start_time = 0
+        self.high_score = 0
+        
+        # Set player and enemy
+        self.player = Player()
+        self.laser_easy = Laser()
+        self.laser_medium = FastLaser()
+        self.laser_hard = FastLaser()
+
+        # Track which music is currently playing: "game" or "over"
+        self.music_state = None
+
+        # Set dict for key presses
+        self.moving = {
+            "up": False,
+            "down": False,
+            "left": False,
+            "right": False
+        }
+
+    # Display background  
+    def draw_background(self):
+        self.screen.blit(self.ground_surface, (0, 0))
+
+    # Display score
+    def draw_score(self, text):
+        display_score_surface = self.font.render(f"{text}: {self.score}", False, (168, 50, 145))
+        display_score_rect = display_score_surface.get_rect(midtop = (SCREEN_WIDTH /2, 100))
+        self.screen.blit(display_score_surface, display_score_rect)
+
+    # Helper: play music only when switching states
+    def play_music(self, state):
+        # state should be "game" or "over"
+        if self.music_state == state:
+            return  # already playing correct music
+
+        pygame.mixer.music.stop()
+
+        if state == "game":
+            pygame.mixer.music.load(AUDIO_TRACK)
+            pygame.mixer.music.play(-1)
+            pygame.mixer.music.set_volume(.4)
+
+        if state == "over":
+            pygame.mixer.music.load(GAME_OVER_AUDIO)
+            pygame.mixer.music.play()
+            pygame.mixer.music.set_volume(.4)
+
+        self.music_state = state
+
+    # Game Over
+    def draw_game_over(self):
+        # Switch to game-over
+        self.play_music("over")
+
+        self.screen.fill((94, 129, 162))
+        self.draw_score("Your Score")
+
+        # Print text to play again
+        display_restart_game_surface = self.font.render(PLAY_AGAIN_STR, False, (168, 50, 145))
+        display_restart_game_rect = display_restart_game_surface.get_rect(midbottom = (SCREEN_WIDTH / 2, 340))
+        self.screen.blit(display_restart_game_surface, display_restart_game_rect)
+
+        # Display high score
+        high_score_font = pygame.font.Font(FONT, 64)
+        high_score_surface = high_score_font.render(f"High Score: {self.high_score}", False, (168, 50, 145))
+        high_score_rect = high_score_surface.get_rect(midbottom = (SCREEN_WIDTH / 2, 60))
+        self.screen.blit(high_score_surface, high_score_rect)
+
+    # Calc score
+    def calculate_score(self):
+        self.score = int((pygame.time.get_ticks() - self.start_time ) / 500)
+        
+        if self.score > self.high_score:
+            self.high_score = self.score
+    
+    # Handle user input
+    def handle_events(self):
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+            if self.welcome_screen:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_1:
+                        self.difficulty = 0
+                        self.welcome_screen = False
+                        self.game_active = True
+                        self.start_time = pygame.time.get_ticks()
+                    if event.key == pygame.K_2:
+                        self.difficulty = 1
+                        self.welcome_screen = False
+                        self.game_active = True
+                        self.start_time = pygame.time.get_ticks()
+
+                    if event.key == pygame.K_3:
+                        self.difficulty = 2
+                        self.welcome_screen = False
+                        self.game_active = True
+                        self.start_time = pygame.time.get_ticks()
+            
+
+
+            elif self.game_active:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_w:
+                        self.moving["up"] = True
+                    if event.key == pygame.K_s:
+                        self.moving["down"] = True
+                    if event.key == pygame.K_a:
+                        self.moving["left"] = True
+                    if event.key == pygame.K_d:
+                        self.moving["right"] = True
+
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_w:
+                        self.moving["up"] = False
+                    if event.key == pygame.K_s:
+                        self.moving["down"] = False
+                    if event.key == pygame.K_a:
+                        self.moving["left"] = False
+                    if event.key == pygame.K_d:
+                        self.moving["right"] = False
+
+            else:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        self.reset_to_welcome()
+
+
+    def reset_to_welcome(self):
+        self.game_active = False
+        self.welcome_screen = True
+        self.difficulty = None
+        self.score = 0
+        self.start_time = 0
+        self.player_lives = PLAYER_LIVES
+        self.last_hit_time = 0
+
+        # reset entities
+        self.player = Player()
+        self.laser_easy = Laser()
+        self.laser_medium = FastLaser()
+        self.laser_hard = FastLaser()
+
+        # reset input
+        for k in self.moving:
+            self.moving[k] = False
+
+        pygame.mixer.music.stop()
+        self.music_state = None
+
+    def draw_welcome_screen(self):
+        self.screen.fill((94, 129, 162))
+        welcome_font = pygame.font.Font(FONT, 60)
+        welcome_surface = welcome_font.render("Welcome to the laser game!!", False, (168, 50, 145))
+        welcome_rect = welcome_surface.get_rect(midtop = (SCREEN_WIDTH /2, 50))
+        self.screen.blit(welcome_surface, welcome_rect)
+
+        level_choice_font = pygame.font.Font(FONT, 40)
+        level_choice_surface = level_choice_font.render(LEVEL_CHOICE_STR, False, (168, 50, 145))
+        level_choice_rect = level_choice_surface.get_rect(center = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2))
+        self.screen.blit(level_choice_surface, level_choice_rect)
+    
+    def draw_player_lives(self):
+        player_lives_font = pygame.font.Font(FONT, 40)
+        player_lives_surface = player_lives_font.render(f"Lives: {self.player_lives}", False, (168, 50, 145))
+        player_lives_rect = player_lives_surface.get_rect(topleft = (25, 35))
+        self.screen.blit(player_lives_surface, player_lives_rect)
+
+    def try_take_damage(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_hit_time >= self.invincibility_ms:
+            self.player_lives -= 1
+            self.last_hit_time = now
+
+            if self.player_lives <= 0:
+                self.game_active = False
+
+
+    #  Display changes based on events
+    def update(self):
+
+
+        if self.game_active:
+            # Ensure game music is playing (only switches once)
+            self.play_music("game")
+
+            
+            self.calculate_score()
+
+     
+            # Move player
+            if self.moving["up"]:
+                self.player.move("up")
+            if self.moving["down"]:
+                self.player.move("down")
+            if self.moving["left"]:
+                self.player.move("left")
+            if self.moving["right"]:
+                self.player.move("right")
+
+            self.laser_easy.move()
+
+            if self.difficulty == 1:
+                self.laser_medium.move()
+                
+          
+            if self.difficulty == 2:
+                self.laser_medium.move()
+                self.laser_hard.move()
+            
+        
+            # check if laser collides with player
+            if self.laser_easy.rect.colliderect(self.player.rect):
+                self.try_take_damage()
+
+                
+            if self.laser_medium.rect.colliderect(self.player.rect) and self.difficulty == 1:
+                    self.try_take_damage()
+
+
+            if self.laser_hard.rect.colliderect(self.player.rect) and self.difficulty == 2:
+                self.try_take_damage()
+
+        else:
+            pass
+
+    def draw(self):
+        if self.welcome_screen:
+            self.draw_welcome_screen()
+            
+
+        elif self.game_active:
+            self.draw_background()
+            
+            self.draw_player_lives()
+            # Add player to screen
+            self.player.draw(self.screen)
+
+
+            self.laser_easy.draw(self.screen)
+
+            if self.difficulty == 1:
+                self.laser_medium.draw(self.screen)
+            
+            if self.difficulty == 2:
+                self.laser_medium.draw(self.screen)
+                self.laser_hard.draw(self.screen)
+            
+            self.draw_score("Current Score")
+
+        else:
+            self.draw_game_over()
+
+    
+
+
+    # Main
+    def run(self):
+        while True:
+            self.handle_events()
+            self.update()
+            self.draw()
+            pygame.display.update()
+            self.clock.tick(60)
+
+
+Game().run()

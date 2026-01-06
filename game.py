@@ -1,9 +1,9 @@
 import pygame
 from sys import exit
 from constants import *
-from random import randint
+from random import randint, choice
 from player import Player
-from laser import Laser, FastLaser
+from laser import Laser
 
 
 class Game:
@@ -39,9 +39,13 @@ class Game:
         
         # Set player and enemy
         self.player = Player(PLAYER_LIVES)
-        self.laser_easy = Laser()
-        self.laser_medium = FastLaser()
-        self.laser_hard = FastLaser()
+        self.laser = pygame.sprite.Group()
+        
+        self.laser.add(Laser(0))
+        
+     
+        self.timer = pygame.USEREVENT + 1
+        pygame.time.set_timer(self.timer, choice(range(600, 1500)))
 
         # Track which music is currently playing: "game" or "over"
         self.music_state = None
@@ -135,6 +139,22 @@ class Game:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
                         self.reset_to_welcome()
+            
+            elif event.type == self.timer and self.game_active:
+                if self.difficulty == 0:
+                    self.laser.add(Laser(0))
+                elif self.difficulty == 1:
+                    self.laser.add(Laser(1))
+                else:
+                    self.laser.add(Laser(2))
+
+
+                if self.difficulty == 0:
+                    pygame.time.set_timer(self.timer, choice(range(600, 1500)))
+                elif self.difficulty == 1:
+                    pygame.time.set_timer(self.timer, choice(range(500, 1100)))
+                else:
+                    pygame.time.set_timer(self.timer, choice(range(300, 800)))
 
             else: pass
 
@@ -149,13 +169,8 @@ class Game:
 
         # reset entities
         self.player = Player(PLAYER_LIVES)
-        self.laser_easy = Laser()
-        self.laser_medium = FastLaser()
-        self.laser_hard = FastLaser()
+        self.laser.empty()
 
-        # # reset input
-        # for k in self.moving:
-        #     self.moving[k] = False
 
         pygame.mixer.music.stop()
         self.music_state = None
@@ -173,9 +188,6 @@ class Game:
         self.screen.blit(level_choice_surface, level_choice_rect)
     
 
-
-
-
     #  Display changes based on events
     def update(self):
 
@@ -187,44 +199,19 @@ class Game:
             
             self.calculate_score()
 
-            # Add player to screen
+            #
             self.player.update()
 
-            # Move player
-            # if self.moving["up"]:
-            #     self.player.move("up")
-            # if self.moving["down"]:
-            #     self.player.move("down")
-            # if self.moving["left"]:
-            #     self.player.move("left")
-            # if self.moving["right"]:
-            #     self.player.move("right")
 
-            self.laser_easy.move()
-            if self.player.player_lives <= 0:
-                self.game_active = False
-
-
-            if self.difficulty == 1:
-                self.laser_medium.move()
-                
-          
-            if self.difficulty == 2:
-                self.laser_medium.move()
-                self.laser_hard.move()
+            self.laser.update()
+      
             
+            if pygame.sprite.spritecollideany(self.player, self.laser):
+                self.player.try_take_damage()
         
-            # check if laser collides with player
-            if self.laser_easy.rect.colliderect(self.player.rect):
-                self.player.try_take_damage()
-
-                
-            if self.laser_medium.rect.colliderect(self.player.rect) and self.difficulty == 1:
-                    self.player.try_take_damage()
-
-
-            if self.laser_hard.rect.colliderect(self.player.rect) and self.difficulty == 2:
-                self.player.try_take_damage()
+            if self.player.player_lives < 1:
+                self.game_active = False
+   
 
         else:
             pass
@@ -238,18 +225,16 @@ class Game:
             self.draw_background()
             
             self.player.draw_player_lives(self.screen)
-       
-
             self.player.draw(self.screen)
 
-            self.laser_easy.draw(self.screen)
+            self.laser.draw(self.screen)
 
-            if self.difficulty == 1:
-                self.laser_medium.draw(self.screen)
+            # if self.difficulty == 1:
+            #     self.laser_medium.draw(self.screen)
             
-            if self.difficulty == 2:
-                self.laser_medium.draw(self.screen)
-                self.laser_hard.draw(self.screen)
+            # if self.difficulty == 2:
+            #     self.laser_medium.draw(self.screen)
+            #     self.laser_hard.draw(self.screen)
             
             self.draw_score("Current Score")
 

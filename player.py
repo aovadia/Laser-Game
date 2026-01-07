@@ -22,7 +22,7 @@ class Player(pygame.sprite.Sprite):
         
         self.last_hit_time = 0
         self.invincibility_ms = 1000  # 1 second of invincibility
-
+        self.flash_time = 120
 
     def move(self):
             if self.moving["right"]:
@@ -45,9 +45,17 @@ class Player(pygame.sprite.Sprite):
         self.moving["right"] = keys[pygame.K_d]
 
     def draw(self, screen):
-             
+        now = pygame.time.get_ticks()
+        invincible = (now - self.last_hit_time) < self.invincibility_ms
+
+        if invincible:
+            # blink on/off during invincibility
+            visible = ((now - self.last_hit_time) // self.flash_time) % 2 == 0
+            if not visible:
+                return  # skip drawing this frame
 
         screen.blit(self.surface, self.rect)
+
 
     def update(self):
         self.player_input()

@@ -28,6 +28,7 @@ class Game:
 
         # Set backgroud
         self.ground_surface = pygame.image.load(BACKGROUND_IMG).convert()
+        self.ground_surface = pygame.transform.scale(self.ground_surface, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
         # Set font
         self.font = pygame.font.Font(FONT, 32)
@@ -50,10 +51,9 @@ class Game:
         # Track which music is currently playing: "game" or "over"
         self.music_state = None
 
-
-    # Display background  
-    def draw_background(self):
-        self.screen.blit(self.ground_surface, (0, 0))
+        self.background_x1 = 0
+        self.background_x2 = self.ground_surface.get_width()
+        self.scroll_speed = 1
 
     # Display score
     def draw_score(self, text):
@@ -107,6 +107,21 @@ class Game:
         if self.score > self.high_score:
             self.high_score = self.score
     
+    def scroll_background(self):
+        width = self.ground_surface.get_width()
+
+        self.background_x1 -= self.scroll_speed
+        self.background_x2 -= self.scroll_speed
+
+        if self.background_x1 <= -width:
+            self.background_x1 = self.background_x2 + width
+
+        if self.background_x2 <= -width:
+            self.background_x2 = self.background_x1 + width
+
+        self.screen.blit(self.ground_surface, (self.background_x1, 0))
+        self.screen.blit(self.ground_surface, (self.background_x2 - 1, 0))
+
     # Handle user input
     def handle_events(self):
 
@@ -174,6 +189,10 @@ class Game:
 
         pygame.mixer.music.stop()
         self.music_state = None
+
+        self.background_x1 = 0
+        self.background_x2 = self.ground_surface.get_width()
+
 
     def draw_welcome_screen(self):
         self.screen.fill((94, 129, 162))

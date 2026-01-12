@@ -256,6 +256,9 @@ class Game:
             
             if pygame.sprite.spritecollideany(self.player, self.laser):
                 self.player.try_take_damage()
+
+            if pygame.sprite.spritecollideany(self.player, self.obstacle_group):
+                self.player.try_take_damage()
         
             if self.player.player_lives < 1:
                 self.game_active = False
@@ -275,13 +278,6 @@ class Game:
             self.player.draw(self.screen)
 
             self.laser.draw(self.screen)          
-
-            # if self.difficulty == 1:
-            #     self.laser_medium.draw(self.screen)
-            
-            # if self.difficulty == 2:
-            #     self.laser_medium.draw(self.screen)
-            #     self.laser_hard.draw(self.screen)
             
             self.draw_score("Current Score")
 

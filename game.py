@@ -4,6 +4,7 @@ from constants import *
 from random import randint, choice
 from player import Player
 from laser import Laser
+from obstacle import Obstacle
 
 
 class Game:
@@ -44,16 +45,25 @@ class Game:
         
         self.laser.add(Laser(0))
         
+        self.obstacle_group = pygame.sprite.Group()
+        self.obstacle_group.add(Obstacle())
      
         self.timer = pygame.USEREVENT + 1
         pygame.time.set_timer(self.timer, choice(range(600, 1500)))
+
+        self.board_timer = pygame.USEREVENT + 2
 
         # Track which music is currently playing: "game" or "over"
         self.music_state = None
 
         self.background_x1 = 0
         self.background_x2 = self.ground_surface.get_width()
-        self.scroll_speed = 1
+        self.scroll_speed = BOARD_SPEED
+
+        # Obstacle
+        self.obstacle_timer = pygame.USEREVENT + 2
+        pygame.time.set_timer(self.obstacle_timer, 1200)  # spawn every 1.2s
+
 
     # Display score
     def draw_score(self, text):
@@ -137,17 +147,23 @@ class Game:
                         self.welcome_screen = False
                         self.game_active = True
                         self.start_time = pygame.time.get_ticks()
+                        pygame.time.set_timer(self.obstacle_timer, 1200)
+
                     if event.key == pygame.K_2:
                         self.difficulty = 1
                         self.welcome_screen = False
                         self.game_active = True
                         self.start_time = pygame.time.get_ticks()
+                        pygame.time.set_timer(self.obstacle_timer, 1200)
+
 
                     if event.key == pygame.K_3:
                         self.difficulty = 2
                         self.welcome_screen = False
                         self.game_active = True
                         self.start_time = pygame.time.get_ticks()
+                        pygame.time.set_timer(self.obstacle_timer, 1200)
+
             
 
             elif not self.game_active:
@@ -170,6 +186,18 @@ class Game:
                     pygame.time.set_timer(self.timer, choice(range(500, 1100)))
                 else:
                     pygame.time.set_timer(self.timer, choice(range(300, 800)))
+            
+            elif event.type == self.obstacle_timer and self.game_active:
+                if len(self.obstacle_group) == 0:
+                    self.obstacle_group.add(Obstacle())
+                else:
+                    # find rightmost obstacle
+                    rightmost_x = max(o.rect.right for o in self.obstacle_group.sprites())
+
+                    # only spawn if there is enough space
+                    if rightmost_x < SCREEN_WIDTH - MIN_OBSTACLE_GAP:
+                        self.obstacle_group.add(Obstacle())
+
 
             else: pass
 
@@ -179,13 +207,13 @@ class Game:
         self.difficulty = None
         self.score = 0
         self.start_time = 0
-        self.player_lives = PLAYER_LIVES
-        self.last_hit_time = 0
 
-        # reset entities
         self.player = Player(PLAYER_LIVES)
-        self.laser.empty()
 
+        self.laser.empty()
+        self.obstacle_group.empty()
+
+        pygame.time.set_timer(self.obstacle_timer, 0)  # stop obstacle spawns
 
         pygame.mixer.music.stop()
         self.music_state = None
@@ -224,6 +252,7 @@ class Game:
 
             self.laser.update()
       
+            self.obstacle_group.update()
             
             if pygame.sprite.spritecollideany(self.player, self.laser):
                 self.player.try_take_damage()
@@ -241,12 +270,11 @@ class Game:
             
 
         elif self.game_active:
-            self.draw_background()
-            
+            self.scroll_background()
             self.player.draw_player_lives(self.screen)
             self.player.draw(self.screen)
 
-            self.laser.draw(self.screen)
+            self.laser.draw(self.screen)          
 
             # if self.difficulty == 1:
             #     self.laser_medium.draw(self.screen)
@@ -257,6 +285,8 @@ class Game:
             
             self.draw_score("Current Score")
 
+            self.obstacle_group.draw(self.screen)
+       
         else:
             self.draw_game_over()
 

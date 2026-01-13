@@ -1,5 +1,5 @@
 import pygame
-from constants import PLAYER_IMG, SCREEN_WIDTH, SCREEN_HEIGHT, PLAYER_SPEED, FONT
+from constants import PLAYER_IMG, SCREEN_WIDTH, SCREEN_HEIGHT, PLAYER_SPEED, FONT, PLAYER_HIT_AUD
 class Player(pygame.sprite.Sprite):
     def __init__(self, player_lives):
         super().__init__()
@@ -24,6 +24,8 @@ class Player(pygame.sprite.Sprite):
         self.invincibility_ms = 1000  # 1 second of invincibility
         self.flash_time = 120
 
+        self.hit_audio = pygame.mixer.Sound(PLAYER_HIT_AUD)
+        self.hit_audio.set_volume(.5)
     def move(self):
             if self.moving["right"]:
                 self.rect.x += PLAYER_SPEED
@@ -80,7 +82,7 @@ class Player(pygame.sprite.Sprite):
         if now - self.last_hit_time >= self.invincibility_ms:
             self.player_lives -= 1
             self.last_hit_time = now
-
+            self.hit_audio.play()
 
     def draw_player_lives(self, screen):
         player_lives_surface = self.font.render(f"Lives: {self.player_lives}", False, (168, 50, 145))
